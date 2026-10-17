@@ -9,7 +9,7 @@ import Data.Char (ord)
 import Data.Bits (shiftR, (.&.))
 
 import SimpleJSON (JValue(..))
-import Prettify (Doc, (<>), char, double, fsep, hcat, punctuate, text)
+import Prettify (Doc, (<>), char, double, group, line, nest, hcat, punctuate, text)
 
 renderJValue :: JValue -> Doc
 renderJValue (JBool True)  = text "true"
@@ -57,6 +57,9 @@ hexEscape c | d < 0x10000 = smallHex d
     where d = ord c
 
 series :: Char -> Char -> (a -> Doc) -> [a] -> Doc
-series open close item = enclose open close
-                       . fsep . punctuate (char ',') . map item
+series open close item xs = group (char open 
+                                <> nest 2 (hcat (map (line <>) items))
+                                <> line
+                                <> char close)
+      where items = punctuate (char ',') (map item xs)
 

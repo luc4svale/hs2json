@@ -16,6 +16,7 @@ module Prettify
     , compact
     , pretty
     , fill
+    , nest
     ) where
 
 import Prelude hiding ((<>))
@@ -26,6 +27,7 @@ data Doc = Empty
          | Line
          | Concat Doc Doc
          | Union Doc Doc
+         | Nest Int Doc
            deriving (Show, Eq)
 
 empty :: Doc
@@ -43,6 +45,9 @@ double d = text (show d)
 
 line :: Doc
 line = Line
+
+nest :: Int -> Doc -> Doc
+nest i x = Nest i x
 
 (<>) :: Doc -> Doc -> Doc
 Empty <> y = y
@@ -71,6 +76,7 @@ flatten :: Doc -> Doc
 flatten (x `Concat` y) = flatten x `Concat` flatten y
 flatten Line           = Char ' '
 flatten (x `Union` _)  = flatten x
+flatten (Nest i x)     = Nest i (flatten x)
 flatten other          = other
 
 punctuate :: Doc -> [Doc] -> [Doc]
@@ -89,18 +95,20 @@ compact x = transform [x]
                 Line         -> '\n' : transform ds
                 a `Concat` b -> transform (a:b:ds)
                 _ `Union` b  -> transform (b:ds)
+                Nest _ y     -> transform (y:ds)
 
 pretty :: Int -> Doc -> String
-pretty width x = best 0 [x]
-    where best col (d:ds) =
+pretty width x = best 0 [(0,x)]
+    where best col ((i,d):ds) =
               case d of
                 Empty        -> best col ds
                 Char c       -> c : best (col + 1) ds
                 Text s       -> s ++ best (col + length s) ds      
-                Line         -> '\n' : best 0 ds
-                a `Concat` b -> best col (a:b:ds)
-                a `Union` b  -> nicest col (best col (a:ds))
-                                           (best col (b:ds))
+                Line         -> '\n' : replicate i ' ' ++ best i ds
+                Nest j y     -> best col ((i + j, y):ds)
+                a `Concat` b -> best col ((i,a):(i,b):ds)
+                a `Union` b  -> nicest col (best col ((i,a):ds))
+                                           (best col ((i,b):ds))
           best _ _ = ""
 
           nicest col a b | (width - least) `fits` a = a
