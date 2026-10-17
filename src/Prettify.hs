@@ -15,6 +15,7 @@ module Prettify
     , punctuate
     , compact
     , pretty
+    , fill
     ) where
 
 import Prelude hiding ((<>))
@@ -111,3 +112,7 @@ w `fits` _ | w < 0 = False
 w `fits` ""        = True
 w `fits` ('\n':_)  = True
 w `fits` (c:cs)    = (w - 1) `fits` cs
+
+fill :: Int -> Doc -> Doc
+fill width x = x <> text (replicate (width - columns) ' ')
+    where columns = length (compact (flatten x))
