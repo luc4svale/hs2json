@@ -1,24 +1,53 @@
-module Prettify where
+module Prettify 
+    (
+      Doc
+    , empty
+    , char
+    , text
+    , double
+    , line
+    , (<>)
+    , hcat
+    , fsep
+    , punctuate
+    ) where
 
 import Prelude hiding ((<>))
 
-data Doc = ToBeDefined
-         deriving (Show)
+data Doc = Empty
+         | Char Char
+         | Text String
+         | Line
+         | Concat Doc Doc
+         | Union Doc Doc
+           deriving (Show, Eq)
 
-text :: String -> Doc
-text str = undefined
-
-double :: Double -> Doc
-double num = undefined
-  
-(<>) :: Doc -> Doc -> Doc
-a <> b = undefined
+empty :: Doc
+empty = Empty
 
 char :: Char -> Doc
-char c = undefined
+char c = Char c
+
+text :: String -> Doc
+text "" = Empty
+text s  = Text s
+
+double :: Double -> Doc
+double d = text (show d)
+
+line :: Doc
+line = Line
+
+(<>) :: Doc -> Doc -> Doc
+Empty <> y = y
+x <> Empty = x
+x <> y     = x `Concat` y
 
 hcat :: [Doc] -> Doc
-hcat xs = undefined
+hcat = fold (<>)
+
+fold :: (Doc -> Doc -> Doc) -> [Doc] -> Doc
+fold f = foldr f empty
 
 fsep :: [Doc] -> Doc
 fsep xs = undefined
