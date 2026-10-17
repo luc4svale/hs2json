@@ -1,8 +1,9 @@
 cabal-version:      3.0
 name:               hs2json
 version:            0.1.0.0
--- synopsis:
--- description:
+synopsis:           Biblioteca de pretty printing com suporte a JSON
+description:        Representação de JSON em Haskell, uma biblioteca de pretty printing baseada em um tipo abstrato Doc e um renderizador JSON com escape e indentação.
+category:           Text
 license:            MIT
 license-file:       LICENSE
 author:             Antonio Lucas da Silva Vale, Izadora de Paula Santos Lima

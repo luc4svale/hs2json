@@ -80,8 +80,8 @@ flatten (Nest i x)     = Nest i (flatten x)
 flatten other          = other
 
 punctuate :: Doc -> [Doc] -> [Doc]
-punctuate p []     = []
-punctuate p [d]    = [d]
+punctuate _p []     = []
+punctuate _p [d]    = [d]
 punctuate p (d:ds) = (d <> p) : punctuate p ds
 
 compact :: Doc -> String 
@@ -117,9 +117,9 @@ pretty width x = best 0 [(0,x)]
 
 fits :: Int -> String -> Bool
 w `fits` _ | w < 0 = False
-w `fits` ""        = True
-w `fits` ('\n':_)  = True
-w `fits` (c:cs)    = (w - 1) `fits` cs
+_w `fits` ""        = True
+_w `fits` ('\n':_)  = True
+w `fits` (_c:cs)    = (w - 1) `fits` cs
 
 fill :: Int -> Doc -> Doc
 fill width x = x <> text (replicate (width - columns) ' ')
