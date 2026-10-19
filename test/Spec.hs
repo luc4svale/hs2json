@@ -5,17 +5,20 @@ import Test.QuickCheck
 import Data.List (intersperse)
 import Control.Monad(liftM, liftM2)
 import System.Exit(exitFailure)
-
+import Data.Char (isSpace)
 import Prettify
 
 instance Arbitrary Doc where
     arbitrary =
         oneof [ return Empty
-              , liftM  Char   arbitrary
-              , liftM  Text   arbitrary
+              , liftM Char arbitrary
+              , liftM Text arbitrary
               , return Line
               , liftM2 Concat arbitrary arbitrary
-              , liftM2 Union  arbitrary arbitrary ]
+              , liftM group arbitrary
+              ]
+
+    shrink doc = [Empty | doc /= Empty] ++ genericShrink doc
 
 prop_empty_id x =
     empty <> x == x
@@ -40,6 +43,43 @@ prop_punctuate' s xs = punctuate s xs == combine (intersperse s xs)
         combine (Empty:y:ys) = y : combine ys
         combine (x:y:ys)     = x `Concat` y : combine ys
 
+prop_compact_text s = compact (text s) == s
+
+prop_pretty_text :: Int -> String -> Bool
+prop_pretty_text w s =
+    pretty w (text s) == s
+
+prop_pretty_lines_fit w d =
+    w >= 0 ==>
+    all lineFits (lines (pretty w d))
+  where
+    lineFits line
+      | length line <= w = True
+      | otherwise =
+          let indent = length (takeWhile (== ' ') line)
+              piece  = takeWhile (/= ' ') (drop indent line)
+          in length piece > w - indent
+
+equivalent :: String -> String -> Bool
+equivalent s1 s2 =
+    filter (not . isSpace) s1 == filter (not . isSpace) s2
+
+prop_compact_pretty :: Positive Int -> Doc -> Property
+prop_compact_pretty (Positive w) doc =
+    let c = compact doc
+        p = pretty w doc
+    in counterexample
+         (unlines
+            [ "Largura: " ++ show w
+            , "Documento: " ++ show doc
+            , "compact: " ++ show c
+            , "pretty:  " ++ show p
+            ])
+         (equivalent c p)
+
+prop_shrink_demo :: Doc -> Property
+prop_shrink_demo doc =
+    counterexample ("Documento: " ++ show doc) False
 
 return []
 runTests = $quickCheckAll
