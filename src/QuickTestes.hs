@@ -2,7 +2,27 @@ module QuickTestes where
 
 import Data.List (sort, (\\))
 import Test.QuickCheck
+  ( Arbitrary(..)
+  , Gen
+  , elements
+  , generate
+  , choose
+  , (==>)
+  )
 
+data Ternary
+    = Yes
+    | No
+    | Unknown
+    deriving (Eq, Show)
+
+instance Arbitrary Ternary where
+    arbitrary = do
+        n <- choose (0, 2) :: Gen Int
+        return $ case n of
+                      0 -> Yes
+                      1 -> No
+                      _ -> Unknown
 
 qsort :: Ord a => [a] -> [a]
 qsort []     = []

@@ -1,6 +1,6 @@
 module Prettify 
     (
-      Doc
+      Doc(..)
     , empty
     , char
     , text
