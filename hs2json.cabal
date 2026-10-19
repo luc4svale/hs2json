@@ -21,7 +21,7 @@ library
     exposed-modules:  SimpleJSON, PutJSON, Prettify, PrettyJSON
     -- other-modules:
     -- other-extensions:
-    build-depends:    base >=4.14 && <5
+    build-depends:    base >=4.14 && <5, QuickCheck
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -47,4 +47,5 @@ test-suite hs2json-test
     main-is:          Spec.hs
     build-depends:
         base >=4.14 && <5,
-        hs2json
+        hs2json, 
+        QuickCheck
