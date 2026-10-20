@@ -7,6 +7,7 @@ import Data.List (intersperse)
 import Control.Monad(liftM, liftM2)
 import System.Exit(exitFailure)
 import Data.Char (isSpace)
+import SimpleJSON
 import Prettify
 
 
@@ -40,6 +41,29 @@ wellFormed (Concat a b)   = wellFormed a && wellFormed b
 wellFormed u@(Union _ r)  = group r == u && wellFormed r
 wellFormed (Nest _ x)     = wellFormed x
 wellFormed _              = True
+
+instance Arbitrary JValue where
+    arbitrary = sized genJValue
+
+genJValue :: Int -> Gen JValue
+genJValue 0 = scalar
+genJValue n = oneof [scalar, recursive]
+  where
+    smaller   = genJValue (n `div` 2)
+    field     = (,) <$> arbitrary <*> smaller
+    recursive = oneof
+      [ JObject <$> resize (n `div` 2) (listOf field)
+      , JArray  <$> resize (n `div` 2) (listOf smaller)
+      ]
+
+scalar :: Gen JValue
+scalar = oneof
+  [ JString <$> arbitrary
+  , JNumber <$> arbitrary
+  , JBool   <$> arbitrary
+  , return JNull
+  ]
+
 
 prop_empty_id :: Doc -> Bool
 prop_empty_id x =
@@ -105,6 +129,54 @@ prop_compact_pretty (Positive w) doc =
             , "pretty:  " ++ show p
             ])
          (equivalent c p)
+
+prop_getString :: String -> Bool
+prop_getString s = getString (JString s) == Just s
+
+prop_getInt :: Double -> Bool
+prop_getInt d = getInt (JNumber d) == Just (truncate d)
+
+prop_getDouble :: Double -> Bool
+prop_getDouble d = getDouble (JNumber d) == Just d
+
+prop_getBool :: Bool -> Bool
+prop_getBool b = getBool (JBool b) == Just b
+
+prop_getObject :: [(String, JValue)] -> Bool
+prop_getObject o = getObject (JObject o) == Just o
+
+prop_getArray :: [JValue] -> Bool
+prop_getArray a = getArray (JArray a) == Just a
+
+prop_getString_other :: JValue -> Bool
+prop_getString_other v = case v of
+    JString _ -> True
+    _         -> getString v == Nothing
+
+prop_getNumber_other :: JValue -> Bool
+prop_getNumber_other v = case v of
+    JNumber _ -> True
+    _         -> getInt v == Nothing && getDouble v == Nothing
+
+prop_getBool_other :: JValue -> Bool
+prop_getBool_other v = case v of
+    JBool _ -> True
+    _       -> getBool v == Nothing
+
+prop_getObject_other :: JValue -> Bool
+prop_getObject_other v = case v of
+    JObject _ -> True
+    _         -> getObject v == Nothing
+
+prop_getArray_other :: JValue -> Bool
+prop_getArray_other v = case v of
+    JArray _ -> True
+    _        -> getArray v == Nothing
+
+prop_isNull :: JValue -> Bool
+prop_isNull v = isNull v == case v of
+    JNull -> True
+    _     -> False
 
 return []
 
