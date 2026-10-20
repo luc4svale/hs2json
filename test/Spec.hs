@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 import Prelude hiding ((<>))
 
 import Test.QuickCheck
@@ -15,8 +16,8 @@ instance Arbitrary Doc where
         genDoc 0 =
             oneof
                 [ return Empty
-                , liftM Char arbitrary
-                , liftM Text arbitrary
+                , liftM Char (arbitrary `suchThat` (/= '\n'))
+                , liftM Text (arbitrary `suchThat` notElem '\n')
                 , return Line
                 ]
 
@@ -30,24 +31,41 @@ instance Arbitrary Doc where
             subDoc = genDoc (n `div` 2)
 
     shrink doc =
-        [Empty | doc /= Empty] ++ genericShrink doc
+        filter wellFormed ([Empty | doc /= Empty] ++ genericShrink doc)
 
+wellFormed :: Doc -> Bool
+wellFormed (Char c)       = c /= '\n'
+wellFormed (Text s)       = '\n' `notElem` s
+wellFormed (Concat a b)   = wellFormed a && wellFormed b
+wellFormed u@(Union _ r)  = group r == u && wellFormed r
+wellFormed (Nest _ x)     = wellFormed x
+wellFormed _              = True
 
+prop_empty_id :: Doc -> Bool
 prop_empty_id x =
     empty <> x == x
   &&
     x <> empty == x
 
+prop_char :: Char -> Bool
 prop_char c   = char c   == Char c
+
+prop_text :: String -> Bool
 prop_text s   = text s   == if null s then Empty else Text s
+
+prop_line :: Bool
 prop_line     = line     == Line
+
+prop_double :: Double -> Bool
 prop_double d = double d == text (show d)
 
+prop_hcat :: [Doc] -> Bool
 prop_hcat xs = hcat xs == glue xs
     where
         glue []     = empty
         glue (d:ds) = d <> glue ds
 
+prop_punctuate' :: Doc -> [Doc] -> Bool
 prop_punctuate' s xs = punctuate s xs == combine (intersperse s xs)
     where
         combine []           = []
@@ -56,22 +74,20 @@ prop_punctuate' s xs = punctuate s xs == combine (intersperse s xs)
         combine (Empty:y:ys) = y : combine ys
         combine (x:y:ys)     = x `Concat` y : combine ys
 
+prop_compact_text :: String -> Bool
 prop_compact_text s = compact (text s) == s
 
 prop_pretty_text :: Int -> String -> Bool
 prop_pretty_text w s =
     pretty w (text s) == s
 
+maxLine :: String -> Int
+maxLine = maximum . (0 :) . map length . lines
+
+prop_pretty_lines_fit :: Int -> Doc -> Bool
+
 prop_pretty_lines_fit w d =
-    w >= 0 ==>
-    all lineFits (lines (pretty w d))
-  where
-    lineFits line
-      | length line <= w = True
-      | otherwise =
-          let indent = length (takeWhile (== ' ') line)
-              piece  = takeWhile (/= ' ') (drop indent line)
-          in length piece > w - indent
+    maxLine (pretty w d) <= max w (maxLine (pretty (-1) d))
 
 equivalent :: String -> String -> Bool
 equivalent s1 s2 =
@@ -91,6 +107,8 @@ prop_compact_pretty (Positive w) doc =
          (equivalent c p)
 
 return []
+
+runTests :: IO Bool
 runTests = $quickCheckAll
 
 main :: IO ()
