@@ -3,10 +3,12 @@
 import Prelude hiding ((<>))
 
 import Test.QuickCheck
-import Data.List (intersperse)
+import Data.List (intersperse, isPrefixOf, isSuffixOf)
 import Control.Monad(liftM, liftM2)
 import System.Exit(exitFailure)
-import Data.Char (isSpace)
+import Data.Char (chr, isHexDigit, isSpace)
+import Numeric (readHex)
+import PrettyJSON (renderJValue)
 import SimpleJSON
 import Prettify
 
@@ -130,6 +132,15 @@ prop_compact_pretty (Positive w) doc =
             ])
          (equivalent c p)
 
+prop_json_compact_pretty :: JValue -> Int -> Bool
+prop_json_compact_pretty v w =
+    equivalent (compact d) (pretty w d)
+    where d = renderJValue v
+
+prop_json_pretty_wide :: JValue -> Bool
+prop_json_pretty_wide v = '\n' `notElem` pretty maxBound (renderJValue v)
+
+
 prop_getString :: String -> Bool
 prop_getString s = getString (JString s) == Just s
 
@@ -177,6 +188,72 @@ prop_isNull :: JValue -> Bool
 prop_isNull v = isNull v == case v of
     JNull -> True
     _     -> False
+
+render :: String -> String
+render s = compact (renderJValue (JString s))
+
+trickyChar :: Gen Char
+trickyChar = oneof
+    [ arbitrary
+    , choose ('\x00', '\x1f')
+    , choose ('\x7f', '\xff')
+    , choose ('\x10000', '\x10ffff')
+    ]
+
+trickyString :: Gen String
+trickyString = listOf trickyChar
+
+prop_escape_quoted :: String -> Bool
+prop_escape_quoted s =
+    "\"" `isPrefixOf` out && "\"" `isSuffixOf` out && length out >= 2
+    where out = render s
+
+prop_escape_no_control :: Property
+prop_escape_no_control = forAllShrink trickyString shrink $ \s ->
+    all (>= ' ') (render s)
+
+prop_escape_ascii :: Property
+prop_escape_ascii = forAllShrink trickyString shrink $ \s ->
+    all (\c -> c >= ' ' && c <= '~') (render s)
+
+prop_escape_roundtrip :: Property
+prop_escape_roundtrip = forAllShrink trickyString shrink $ \s ->
+    decodeJSONString (render s) == Just s
+
+decodeJSONString :: String -> Maybe String
+decodeJSONString ('"':body) = go body
+  where
+    go "\""        = Just ""
+    go ('"':_)     = Nothing
+    go ('\\':c:cs) = case lookup c simple of
+        Just ch          -> (ch :) <$> go cs
+        Nothing
+          | c == 'u'     -> unicode cs
+          | otherwise    -> Nothing
+    go (c:cs)      = (c :) <$> go cs
+    go []          = Nothing
+
+    simple = [ ('"','"'), ('\\','\\'), ('/','/'), ('b','\b')
+             , ('f','\f'), ('n','\n'), ('r','\r'), ('t','\t') ]
+
+    unicode cs = do
+        (hi, rest) <- hex4 cs
+        if hi >= 0xD800 && hi < 0xDC00
+            then case rest of
+                ('\\':'u':rest') -> do
+                    (lo, rest'') <- hex4 rest'
+                    let ch = chr (0x10000 + (hi - 0xD800) * 0x400 + (lo - 0xDC00))
+                    (ch :) <$> go rest''
+                _ -> Nothing
+            else (chr hi :) <$> go rest
+
+    hex4 cs = case splitAt 4 cs of
+        (h, rest) | length h == 4
+                  , all isHexDigit h
+                  , [(v, "")] <- readHex h
+                  -> Just (v, rest)
+        _         -> Nothing
+decodeJSONString _ = Nothing
 
 return []
 
