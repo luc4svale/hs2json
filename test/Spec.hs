@@ -8,17 +8,30 @@ import System.Exit(exitFailure)
 import Data.Char (isSpace)
 import Prettify
 
-instance Arbitrary Doc where
-    arbitrary =
-        oneof [ return Empty
-              , liftM Char arbitrary
-              , liftM Text arbitrary
-              , return Line
-              , liftM2 Concat arbitrary arbitrary
-              , liftM group arbitrary
-              ]
 
-    shrink doc = [Empty | doc /= Empty] ++ genericShrink doc
+instance Arbitrary Doc where
+    arbitrary = sized genDoc
+      where
+        genDoc 0 =
+            oneof
+                [ return Empty
+                , liftM Char arbitrary
+                , liftM Text arbitrary
+                , return Line
+                ]
+
+        genDoc n =
+            frequency
+                [ (4, genDoc 0)
+                , (3, liftM2 Concat subDoc subDoc)
+                , (2, liftM group subDoc)
+                ]
+          where
+            subDoc = genDoc (n `div` 2)
+
+    shrink doc =
+        [Empty | doc /= Empty] ++ genericShrink doc
+
 
 prop_empty_id x =
     empty <> x == x
@@ -76,10 +89,6 @@ prop_compact_pretty (Positive w) doc =
             , "pretty:  " ++ show p
             ])
          (equivalent c p)
-
-prop_shrink_demo :: Doc -> Property
-prop_shrink_demo doc =
-    counterexample ("Documento: " ++ show doc) False
 
 return []
 runTests = $quickCheckAll
