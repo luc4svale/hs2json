@@ -18,8 +18,8 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules:  SimpleJSON, PutJSON, Prettify, PrettyJSON, QuickTestes
-    -- other-modules:
+    exposed-modules:  SimpleJSON, PutJSON, Prettify, PrettyJSON, QuickTests
+    -- other-modules:   
     -- other-extensions:
     build-depends:    base >=4.14 && <5, QuickCheck
     hs-source-dirs:   src
