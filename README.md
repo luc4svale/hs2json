@@ -2,6 +2,10 @@
 
 Biblioteca Haskell que representa dados JSON, formata a saída com um pretty printer e testa o código com QuickCheck. A dupla desenvolveu o projeto seguindo o tutorial [*Construindo e Testando uma Biblioteca Haskell*](https://lambdageo-edu.github.io/lambdageo-tutorials/haskell/), do LambdaGeo.
 
+## Vídeo de apresentação
+
+**[Assista ao vídeo no Google Drive](https://drive.google.com/file/d/118JS9y7MCfGDxxQOHfBuXSg1Je7WZ5rB/view?usp=sharing)**
+
 ## Dupla
 
 - Antonio Lucas da Silva Vale
