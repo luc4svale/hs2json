@@ -40,7 +40,7 @@ prop_minimum' xs =
 prop_ordered :: Ord a => [a] -> Bool
 prop_ordered xs = ordered (qsort xs)
     where ordered []       = True
-          ordered [_x]      = True
+          ordered [_x]     = True
           ordered (x:y:ys) = x <= y && ordered (y:ys)
 
 prop_permutation :: Ord a => [a] -> Bool

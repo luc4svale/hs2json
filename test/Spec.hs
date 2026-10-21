@@ -111,7 +111,6 @@ maxLine :: String -> Int
 maxLine = maximum . (0 :) . map length . lines
 
 prop_pretty_lines_fit :: Int -> Doc -> Bool
-
 prop_pretty_lines_fit w d =
     maxLine (pretty w d) <= max w (maxLine (pretty (-1) d))
 
@@ -139,7 +138,6 @@ prop_json_compact_pretty v w =
 
 prop_json_pretty_wide :: JValue -> Bool
 prop_json_pretty_wide v = '\n' `notElem` pretty maxBound (renderJValue v)
-
 
 prop_getString :: String -> Bool
 prop_getString s = getString (JString s) == Just s
